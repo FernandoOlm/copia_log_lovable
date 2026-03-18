@@ -31,8 +31,8 @@ let lastSnapshot = "";
 // =======================
 function copyFolder() {
   if (!fs.existsSync(SOURCE)) {
-    console.log("⚠️ Pasta de origem não encontrada");
-    return;
+    console.log("⚠️ Origem não encontrada");
+    return false;
   }
 
   if (!fs.existsSync(DEST)) {
@@ -42,11 +42,17 @@ function copyFolder() {
   const files = fs.readdirSync(SOURCE);
 
   for (const file of files) {
-    const src = path.join(SOURCE, file);
-    const dest = path.join(DEST, file);
+    try {
+      const src = path.join(SOURCE, file);
+      const dest = path.join(DEST, file);
 
-    fs.copyFileSync(src, dest);
+      fs.copyFileSync(src, dest);
+    } catch (err) {
+      console.log("⚠️ Erro ao copiar:", file);
+    }
   }
+
+  return true;
 }
 // =======================
 // FIM: COPIAR PASTA
@@ -54,18 +60,22 @@ function copyFolder() {
 
 
 // =======================
-// INÍCIO: GERAR SNAPSHOT
+// INÍCIO: SNAPSHOT
 // =======================
 function generateSnapshot() {
   if (!fs.existsSync(DEST)) return "";
 
   let data = "";
 
-  const files = fs.readdirSync(DEST);
+  const files = fs.readdirSync(DEST).sort(); // ordem consistente
 
   for (const file of files) {
-    const content = fs.readFileSync(path.join(DEST, file), "utf-8");
-    data += content;
+    try {
+      const content = fs.readFileSync(path.join(DEST, file), "utf-8");
+      data += content;
+    } catch {
+      // ignora erro de leitura
+    }
   }
 
   return data;
@@ -80,12 +90,13 @@ function generateSnapshot() {
 // =======================
 async function sync() {
   try {
-    copyFolder();
+    const copied = copyFolder();
+    if (!copied) return;
 
     const currentSnapshot = generateSnapshot();
 
     if (currentSnapshot === lastSnapshot) {
-      console.log("⏸️ Nada mudou...");
+      console.log("⏸️ Sem mudanças...");
       return;
     }
 
@@ -94,6 +105,14 @@ async function sync() {
     console.log("🚨 Mudança detectada");
 
     await git.add("./logs");
+
+    const status = await git.status();
+
+    if (status.files.length === 0) {
+      console.log("📭 Nada para commitar");
+      return;
+    }
+
     await git.commit(`sync logs ${new Date().toISOString()}`);
     await git.push("origin", "main");
 
@@ -112,7 +131,7 @@ async function sync() {
 // INÍCIO: START
 // =======================
 console.log("🔥 Sync iniciado...");
-sync(); // roda uma vez ao iniciar
+sync();
 setInterval(sync, INTERVAL);
 // =======================
 // FIM: START
