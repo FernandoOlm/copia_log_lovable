@@ -1,9 +1,9 @@
 // =======================
 // INÍCIO: IMPORTS
 // =======================
-import fs from "fs";
-import path from "path";
-import simpleGit from "simple-git";
+const fs = require("fs");
+const path = require("path");
+const simpleGit = require("simple-git");
 // =======================
 // FIM: IMPORTS
 // =======================
@@ -16,7 +16,7 @@ const SOURCE = "/home/folmdelima/Ferdinando_Cloud/logs";
 const DEST = "/home/folmdelima/chat-insights/logs";
 const REPO_PATH = "/home/folmdelima/chat-insights";
 
-const INTERVAL = 60000; // 1 minuto
+const INTERVAL = 60000;
 
 const git = simpleGit(REPO_PATH);
 
@@ -27,7 +27,7 @@ let lastSnapshot = "";
 
 
 // =======================
-// INÍCIO: COPIAR PASTA
+// INÍCIO: COPIAR
 // =======================
 function copyFolder() {
   if (!fs.existsSync(SOURCE)) {
@@ -43,19 +43,19 @@ function copyFolder() {
 
   for (const file of files) {
     try {
-      const src = path.join(SOURCE, file);
-      const dest = path.join(DEST, file);
-
-      fs.copyFileSync(src, dest);
-    } catch (err) {
-      console.log("⚠️ Erro ao copiar:", file);
+      fs.copyFileSync(
+        path.join(SOURCE, file),
+        path.join(DEST, file)
+      );
+    } catch {
+      console.log("⚠️ erro ao copiar", file);
     }
   }
 
   return true;
 }
 // =======================
-// FIM: COPIAR PASTA
+// FIM: COPIAR
 // =======================
 
 
@@ -67,15 +67,12 @@ function generateSnapshot() {
 
   let data = "";
 
-  const files = fs.readdirSync(DEST).sort(); // ordem consistente
+  const files = fs.readdirSync(DEST).sort();
 
   for (const file of files) {
     try {
-      const content = fs.readFileSync(path.join(DEST, file), "utf-8");
-      data += content;
-    } catch {
-      // ignora erro de leitura
-    }
+      data += fs.readFileSync(path.join(DEST, file), "utf-8");
+    } catch {}
   }
 
   return data;
@@ -90,17 +87,17 @@ function generateSnapshot() {
 // =======================
 async function sync() {
   try {
-    const copied = copyFolder();
-    if (!copied) return;
+    const ok = copyFolder();
+    if (!ok) return;
 
-    const currentSnapshot = generateSnapshot();
+    const current = generateSnapshot();
 
-    if (currentSnapshot === lastSnapshot) {
-      console.log("⏸️ Sem mudanças...");
+    if (current === lastSnapshot) {
+      console.log("⏸️ Sem mudanças");
       return;
     }
 
-    lastSnapshot = currentSnapshot;
+    lastSnapshot = current;
 
     console.log("🚨 Mudança detectada");
 
@@ -109,17 +106,17 @@ async function sync() {
     const status = await git.status();
 
     if (status.files.length === 0) {
-      console.log("📭 Nada para commitar");
+      console.log("📭 Nada pra commitar");
       return;
     }
 
     await git.commit(`sync logs ${new Date().toISOString()}`);
     await git.push("origin", "main");
 
-    console.log("🚀 Enviado pro GitHub");
+    console.log("🚀 Enviado");
 
   } catch (err) {
-    console.log("❌ Erro:", err.message);
+    console.log("❌", err.message);
   }
 }
 // =======================
