@@ -13,8 +13,8 @@ const simpleGit = require("simple-git");
 // INÍCIO: CONFIG
 // =======================
 const SOURCE = "/home/folmdelima/Ferdinando_Cloud/logs";
-const DEST = "/home/folmdelima/chat-insights/logs";
-const REPO_PATH = "/home/folmdelima/chat-insights";
+const DEST = "/home/folmdelima/logs_analitcs/logs";
+const REPO_PATH = "/home/folmdelima/logs_analitcs";
 
 const INTERVAL = 60000;
 
@@ -27,13 +27,10 @@ let lastSnapshot = "";
 
 
 // =======================
-// INÍCIO: COPIAR
+// INÍCIO: COPY
 // =======================
 function copyFolder() {
-  if (!fs.existsSync(SOURCE)) {
-    console.log("⚠️ Origem não encontrada");
-    return false;
-  }
+  if (!fs.existsSync(SOURCE)) return false;
 
   if (!fs.existsSync(DEST)) {
     fs.mkdirSync(DEST, { recursive: true });
@@ -47,22 +44,20 @@ function copyFolder() {
         path.join(SOURCE, file),
         path.join(DEST, file)
       );
-    } catch {
-      console.log("⚠️ erro ao copiar", file);
-    }
+    } catch {}
   }
 
   return true;
 }
 // =======================
-// FIM: COPIAR
+// FIM: COPY
 // =======================
 
 
 // =======================
 // INÍCIO: SNAPSHOT
 // =======================
-function generateSnapshot() {
+function snapshot() {
   if (!fs.existsSync(DEST)) return "";
 
   let data = "";
@@ -90,7 +85,7 @@ async function sync() {
     const ok = copyFolder();
     if (!ok) return;
 
-    const current = generateSnapshot();
+    const current = snapshot();
 
     if (current === lastSnapshot) {
       console.log("⏸️ Sem mudanças");
@@ -110,10 +105,10 @@ async function sync() {
       return;
     }
 
-    await git.commit(`sync logs ${new Date().toISOString()}`);
+    await git.commit(`logs ${new Date().toISOString()}`);
     await git.push("origin", "main");
 
-    console.log("🚀 Enviado");
+    console.log("🚀 Logs enviados");
 
   } catch (err) {
     console.log("❌", err.message);
@@ -127,7 +122,7 @@ async function sync() {
 // =======================
 // INÍCIO: START
 // =======================
-console.log("🔥 Sync iniciado...");
+console.log("🔥 Sync logs_analitcs iniciado...");
 sync();
 setInterval(sync, INTERVAL);
 // =======================
