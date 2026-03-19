@@ -24,6 +24,25 @@ const git = simpleGit(DEST);
 
 
 // =======================
+// INÍCIO: LOGGER
+// =======================
+function log(level, context, message, extra = null) {
+  const timestamp = new Date().toISOString();
+
+  let output = `[${timestamp}] [${level}] [${context}] ${message}`;
+
+  if (extra) {
+    output += ` | ${JSON.stringify(extra)}`;
+  }
+
+  console.log(output);
+}
+// =======================
+// FIM: LOGGER
+// =======================
+
+
+// =======================
 // INÍCIO: COPY RECURSIVO
 // =======================
 function copyRecursive(src, dest) {
@@ -45,7 +64,9 @@ function copyRecursive(src, dest) {
       try {
         fs.copyFileSync(srcPath, destPath);
       } catch (err) {
-        console.log("⚠️ erro ao copiar:", entry.name);
+        log("WARN", "COPY", "Erro ao copiar arquivo", {
+          file: entry.name
+        });
       }
     }
   }
@@ -59,8 +80,10 @@ function copyRecursive(src, dest) {
 // INÍCIO: SYNC
 // =======================
 async function sync() {
+  const startTime = Date.now();
+
   try {
-    console.log("🔄 sincronizando...");
+    log("INFO", "SYNC", "Iniciando sincronização");
 
     copyRecursive(SOURCE, DEST);
 
@@ -69,17 +92,26 @@ async function sync() {
     const status = await git.status();
 
     if (status.files.length === 0) {
-      console.log("⏸️ Sem mudanças");
+      log("INFO", "SYNC", "Sem mudanças detectadas");
       return;
     }
+
+    const changedFiles = status.files.length;
 
     await git.commit(`sync logs ${new Date().toISOString()}`);
     await git.push("origin", "main");
 
-    console.log("🚀 enviado pro repo");
+    const duration = Date.now() - startTime;
+
+    log("INFO", "GIT", "Push realizado com sucesso", {
+      arquivosAlterados: changedFiles,
+      tempoMs: duration
+    });
 
   } catch (err) {
-    console.log("❌ erro:", err.message);
+    log("ERROR", "SYNC", "Falha na sincronização", {
+      erro: err.message
+    });
   }
 }
 // =======================
@@ -90,7 +122,12 @@ async function sync() {
 // =======================
 // INÍCIO: START
 // =======================
-console.log("🔥 Sync V2 iniciado...");
+log("INFO", "SYSTEM", "Sync iniciado", {
+  intervaloMs: INTERVAL,
+  source: SOURCE,
+  destino: DEST
+});
+
 sync();
 setInterval(sync, INTERVAL);
 // =======================
